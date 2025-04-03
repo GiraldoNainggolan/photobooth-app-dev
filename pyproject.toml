@@ -1,0 +1,167 @@
+[project]
+name = "photobooth-app"
+requires-python = ">=3.10,<3.14"
+dynamic = ["version"]
+description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
+authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
+maintainers = [{ name = "Michael G", email = "me@mgineer85.de" }]
+readme = "README.md"
+license = { text = "MIT" }
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
+]
+keywords = [
+  "photobooth",
+  "photobooth-app",
+  "wedding",
+  "booth",
+  "raspberry-pi",
+  "camera",
+  "python",
+  "filter",
+  "gphoto2",
+  "dslr",
+  "picamera2",
+]
+dependencies = [
+    "fastapi>=0.106.0",
+    "opencv-python-headless>=4.10.0.84",
+    "numpy>=2.0.0",
+    "simplejpeg>=1.8.2",
+    "pillow>=10.0.0",
+    "psutil>=7.0.0",
+    "pydantic>=2.7.0",
+    "pydantic-extra-types>=2.3.0",
+    "pydantic-settings>=2.1.0",
+    "requests>=2.31.0",
+    "sse-starlette>=2.2.0",
+    "uvicorn[standard]>=0.24", # adds websockets and uvloop
+    "python-dotenv>=1.0.0",
+    "pyserial~=3.5",
+    "jsonref>=1.1.0",
+    "pilgram2>=2.0.6",
+    "linuxpy>=0.10.0; platform_system == 'Linux'",
+    "gpiozero~=2.0.0",
+    "gphoto2~=2.5.0; platform_system == 'Linux' or platform_system == 'Darwin'",
+    "python-statemachine>=2.3.3",
+    "python-multipart>=0.0.6",
+    "pyjwt[crypto]>=2.8.0",
+    "wigglecam",
+    "piexif>=1.1.3",
+    "SQLAlchemy>=2.0.37",
+    "pyturbojpeg>=1.7.0",
+    "pluggy>=1.5.0",
+    "av>=14.0.1",
+]
+
+[project.scripts]
+photobooth = "photobooth.__main__:main"
+
+[project.entry-points.photobooth11]
+commander = 'photobooth.plugins.commander.commander'
+gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
+wled = 'photobooth.plugins.wled.wled'
+filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
+
+
+[project.urls]
+Homepage = "https://github.com/photobooth-app/photobooth-app"
+Repository = "https://github.com/photobooth-app/photobooth-app"
+Documentation = "https://photobooth-app.org"
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.coverage.run]
+# disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
+disable_warnings = ["couldnt-parse"]
+omit = ["test_*.py", "./src/tests/*"]
+parallel = true
+concurrency = ["thread", "multiprocessing"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle
+  "W",  # pycodestyle
+  "F",  # pyflakes
+  "B",  # bugbear
+  "UP", # pyupgrade
+  "I",  # isort
+  #"D",   # pydocstyle   # add later
+]
+ignore = [
+  "B008", #used for DI injection
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/photobooth/services/config/groups/*.py" = ["E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pytest",
+  "pytest-benchmark",
+  "pytest-cov",
+  "coverage[toml]",
+  "httpx",
+  "httpx-sse",
+  "pytest-httpserver",
+  "pydot",
+  "pre-commit",
+  "pyright"
+]
+benchmarks = [
+  "pyvips",
+]
+
+[tool.uv]
+default-groups = ["dev", "benchmarks"] # by default only dev is automatically installed, so here add benchmarks
+
+
+# uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
+# [tool.uv.tasks]
+# test = "pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
+# benchmark = "pytest --basetemp=./tests_tmp/ -v ./src/tests/benchmarks"
+# check = "pyright"
+
+[tool.hatch.version]
+path = "./src/photobooth/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/.vscode",
+  "/.uv_cache",
+  "/assets",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["./src/photobooth"]

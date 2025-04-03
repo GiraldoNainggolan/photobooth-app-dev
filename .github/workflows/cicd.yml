@@ -1,0 +1,44 @@
+name: Publish 🐍 📦 to PyPI and TestPyPI
+
+#on: [push]
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "**"
+  label:
+    types:
+      - created
+      - edited
+
+jobs:
+  pypi-publish:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'photobooth-app' && github.triggering_actor != 'dependabot[bot]' }}
+    environment:
+      name: pypi
+      url: https://pypi.org/p/photobooth-app
+    permissions:
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build packages
+        run: uv build
+      
+      - name: Publish distribution 📦 to Test PyPI
+        continue-on-error: true
+        run: uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always # skip exisiting?
+
+      - name: Publish distribution 📦 to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        run: uv publish --trusted-publishing always
+
+      

@@ -1,0 +1,98 @@
+name: pytest
+
+# coverage is made up by multiple runs on different hosts
+# self-hosted is a RPI and has hardware attached to test and gain high coverage
+# after all jobs finished, coverage is uploaded as described here
+# https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    env:
+      qrshare__shareservice_apikey: "runnertestingpassword"
+      qrshare__shareservice_url: "http://localhost:8082/dl.php"
+      PHP_CLI_SERVER_WORKERS: 6
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          ini-values: upload_max_filesize=50M, post_max_size=51M, memory_limit=200M, max_execution_time=180
+      - name: start php built-in server to allow testing shareservice
+        run: |
+          sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php
+          nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
+      - name: Set up Python and uv ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Install system apt dependencies
+        run: |
+          sudo apt update
+          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
+          sudo apt -y install ffmpeg
+      - name: install the project
+        run: |
+          uv sync --all-extras --dev
+      - name: Run pytest
+        run: |
+          uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
+      - name: output php logs
+        if: always()
+        run: |
+          cat phpd.log || true
+          cat extras/shareservice/php-error.log || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+  tests-hardware-rpi:
+    env:
+      ## Sets environment variable
+      wled-wled_enabled: True
+      wled-wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+
+      # use system python to allow for picamera2 to import
+      UV_PYTHON: 3.11
+      UV_PYTHON_PREFERENCE: only-system
+
+    runs-on: [self-hosted, rpi]
+    if: ${{ github.repository_owner == 'photobooth-app' }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: uv venv --system-site-packages
+      - run: uv sync # install in-project env
+      - name: Test with pytest
+        run: |
+          uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-hardware-rpi
+          path: ./coverage.xml
+
+  upload-to-codecov:
+    needs: [tests, tests-hardware-rpi]
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'photobooth-app' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

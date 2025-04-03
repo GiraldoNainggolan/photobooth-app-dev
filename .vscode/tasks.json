@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "uvx ruff check ."
+    },
+    {
+      "label": "format",
+      "type": "shell",
+      "command": "uvx ruff format ."
+    },
+    {
+      "label": "statemachine diagram (needs pydot and graphviz)",
+      "type": "shell",
+      "command": "uv run python -m statemachine.contrib.diagram photobooth.services.processor.machine.processingmachine.ProcessingMachine diagram_ProcessingPicture.png"
+    },
+    {
+      "label": "create openapi.json schema http api description",
+      "type": "shell",
+      "command": "uv run python -m photobooth.utils.fastapi_get_openapi"
+    }
+  ]
+}
