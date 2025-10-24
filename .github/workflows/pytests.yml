@@ -53,7 +53,7 @@ jobs:
         run: |
           cat phpd.log || true
           cat extras/shareservice/php-error.log || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
@@ -78,7 +78,7 @@ jobs:
       - name: Test with pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: coverage-hardware-rpi
           path: ./coverage.xml
